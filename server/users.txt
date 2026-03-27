@@ -1,0 +1,7 @@
+carlos:1234
+omar:4321
+padrino:0000
+marco:5678
+ana:abcd
+luis:pass1
+sofia:qwerty
