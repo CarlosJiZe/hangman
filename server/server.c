@@ -34,7 +34,6 @@ FUNCIONES AUXILIARES
 ------------------------------------------ */
 
 //is_valid_letter, revisa si el caracter es una letra valida para adivinar (A-Z o a-z)
-
 int is_valid_letter(char c){
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
@@ -184,8 +183,8 @@ void handle_client(int client_fd, struct sockaddr_in client_addr){
     send(client_fd,buffer,strlen(buffer),0); //Enviamos el mensaje con el rol asignado
     fflush(stdout);
 
-    //Situación cuando solo hay un jugador conectad
-    if(current_players<MAX_PLAYERS){
+    //Situación cuando solo hay un jugador conectado
+    if(current_players < MAX_PLAYERS){
         snprintf(buffer, sizeof(buffer), "%s\n", MSG_WAIT);
         send(client_fd,buffer,strlen(buffer),0); //Enviamos el mensaje de esperar al otro jugador
         printf("[hijo %d] Espereando al segundo jugador...\n",getpid());
@@ -196,7 +195,6 @@ void handle_client(int client_fd, struct sockaddr_in client_addr){
             usleep(100000); //Revisamos cada 100ms para no saturar la CPU
         }
     }
-
 
     /* ------------------------------------------
     LOGICA DEL JUEGO
@@ -227,7 +225,7 @@ void handle_client(int client_fd, struct sockaddr_in client_addr){
 
             //Validamos que la palabra sea solo A-Z
             if(!is_valid_word(word)){
-                snprintf(buffer,sizeof(buffer), "%s: Solo letras A-Z, sin acentos ni espacios ni ñ, min 2 y max %d letras\n", MSG_ERROR, MAX_WORD-1);
+                snprintf(buffer,sizeof(buffer), "%s: Solo letras A-Z, sin acentos ni espacios ni n~, min 2 y max %d letras\n", MSG_ERROR, MAX_WORD-1);
                 send(client_fd, buffer, strlen(buffer),0); //Enviamos el mensaje de error
                 continue; //Volvemos a pedir la palabra
             }
@@ -260,8 +258,15 @@ void handle_client(int client_fd, struct sockaddr_in client_addr){
         }
         sem_post(game_sem); //Liberamos el candado
         send(client_fd, buffer, strlen(buffer),0); //Enviamos el mensaje con el resultado final
+
     }else{
         // -----------------LOGICA DEL GUESSER-------------------------
+
+        /* NUEVO: Le avisamos al guesser que ya conectaron los 2 jugadores
+           y que ahora debe esperar a que el setter ponga la palabra.
+           Esto es diferente al WAIT anterior que significaba "espera al segundo jugador" */
+        snprintf(buffer, sizeof(buffer), "%s\n", MSG_WAITING_WORD);
+        send(client_fd, buffer, strlen(buffer), 0);
 
         //Esperamos a que el setter establezca la palabra
         while(gs->status != STATE_PLAYING){
@@ -522,5 +527,4 @@ int main(){
     close(server_fd); //Cerramos el socket del servidor
 
     return 0;
-
 }

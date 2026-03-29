@@ -5,7 +5,7 @@ Todos los mensajes son strings que terminan en '\n'
 """
 
 #Puerto donde corre el servidor (Debe ser el mismo que protocol.h)
-PORT = 10820
+PORT = 5000
 
 #Tamaño de buffer al leer mensajes del socket
 BUFFER_SIZE = 256
@@ -34,6 +34,7 @@ MSG_WAIT = "WAIT" # "WAIT\n"
 MSG_OPPONENT_LEFT = "OPPONENT_LEFT" # el otro jugador se fue
 MSG_ROOM_FULL = "ROOM_FULL" # el servidor no puede aceptar más jugadores
 MSG_ERROR = "ERROR" # el servidor informa sobre un error en la validación de la palabra
+MSG_WAITING_WORD = "WAITING_WORD" # el guesser espera a que el setter ponga la palabra
 
 """
 ROLES
@@ -62,7 +63,7 @@ def parse_message(raw):
     #Recibe un mensaje crudo y lo parte en sus componentes
     #Ejemplo: parse_message("CORRECT:C_MP_TAD_R_:3\n") → ["CORRECT", "C_MP_TAD_R_", "3"]
     #Siempre quita el '\n' del final antes de partir
-    return raw.strip().split(":")
+    return [part.strip() for part in raw.strip().split(":")]
 
 def is_valid_letter(c):
     #Verifica que el caracter sea una letra valida A-Z o a-z

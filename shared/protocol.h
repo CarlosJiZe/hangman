@@ -15,7 +15,7 @@
 #define MAX_WORD 64
 
 // Puerto donde escucha el servidor
-#define PORT 10820
+#define PORT 5000
 
 /*
     MENSAJES DEL CLIENTE AL SERVIDOR
@@ -89,6 +89,11 @@
 //Ejemplo "ERROR: Solo se permiten letras A-Z\n"
 //Ejemplo "ERROR: La palabra ya fue establecida\n"
 #define MSG_ERROR "ERROR"
+
+//El servidor avisa al guesser que debe esperar a que el setter ponga la palabra
+//Se manda cuando ya conectaron los 2 jugadores pero el setter aun no ha puesto la palabra
+//Ejemplo "WAITING_WORD\n"
+#define MSG_WAITING_WORD "WAITING_WORD"
 
 /*
     CONSTANTES DEL JUEGO
