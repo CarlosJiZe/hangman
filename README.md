@@ -82,7 +82,7 @@ cd hangman/server
 Dentro de la carpeta `server`, ejecuta:
 
 ```bash
-make
+make clean && make
 ```
 
 Si la compilacion es exitosa, veras algo similar a:
