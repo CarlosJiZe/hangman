@@ -7,7 +7,7 @@ Juego multijugador del ahorcado implementado con arquitectura cliente-servidor d
 ## Indice
 
 - [Arquitectura](#arquitectura)
-- [Requisitos](#requisitos)
+- [Requisitos previos](#requisitos-previos)
 - [Configuracion del Servidor](#configuracion-del-servidor)
 - [Configuracion del Cliente](#configuracion-del-cliente)
 - [Modos de Ejecucion](#modos-de-ejecucion)
@@ -28,56 +28,73 @@ El servidor corre en un contenedor Docker con Ubuntu y coordina toda la comunica
 
 ---
 
-## Requisitos
+## Requisitos previos
 
-### Servidor
-- Docker Desktop instalado
-- Imagen de Ubuntu en Docker
+Antes de ejecutar la aplicacion, es necesario contar con lo siguiente:
 
-### Cliente
-- Python 3.10 o superior con tkinter incluido
-  - En Mac: se recomienda instalar Python 3.12 desde python.org o con Homebrew, ya que el Python del sistema puede ser una version antigua
-  - En Windows: cualquier instalacion de Python desde python.org, Miniforge o Anaconda funciona
-  - En Linux: instalar `python3` y `python3-tk` con el gestor de paquetes
+- Docker Desktop instalado y en ejecucion en la maquina que servira como servidor. Docker Desktop se puede descargar en docker.com y esta disponible para Windows, Mac y Linux.
+- Python 3.10 o superior instalado en las maquinas que actuaran como clientes. Python se puede descargar desde python.org.
+- Git instalado para clonar el repositorio. Se puede descargar de git-scm.com.
+- Todas las maquinas deben estar conectadas a la misma red Wi-Fi si se desea realizar una distribucion real entre dos computadoras distintas.
 
 ---
 
-## Configuracion del Servidor
+## Paso 1: Configurar el servidor en Docker
 
-### 1. Levantar el contenedor Docker
+El servidor corre en un contenedor de Docker con Ubuntu. La configuracion completa de un contenedor de Docker implica varios pasos adicionales, como la instalacion de Docker Desktop, la descarga de la imagen de Ubuntu, la configuracion de los recursos del contenedor y la gestion de volumenes, que van mas alla del alcance de este documento. Para informacion detallada sobre como configurar Docker desde cero, se recomienda consultar la documentacion oficial en docs.docker.com.
 
-Si ya tienes el contenedor creado con el puerto mapeado:
-```bash
-docker start -i ubuntu1
-```
+Una vez que el contenedor esta creado, es necesario que el puerto este correctamente mapeado. El mapeo de puertos se realiza con el siguiente comando al momento de crear el contenedor:
 
-Si es la primera vez, crea el contenedor mapeando el puerto:
 ```bash
 docker run -p 5001:5000 -it ubuntu bash
 ```
 
-El mapeo `5001:5000` significa que el puerto 5001 de tu maquina apunta al puerto 5000 del contenedor donde escucha el servidor.
+El parametro `-p 5001:5000` indica que el puerto 5001 de la maquina anfitriona apunta al puerto 5000 dentro del contenedor, donde escucha el servidor. Esto permite que los clientes en otras maquinas de la red se conecten al servidor a traves del puerto 5001 de forma transparente.
 
-### 2. Clonar el repositorio dentro del contenedor
+Si el contenedor ya esta creado con el puerto mapeado, simplemente arrancalo con:
 
 ```bash
-apt-get update && apt-get install -y git gcc make
+docker start -i nombre_del_contenedor
+```
+
+---
+
+## Paso 2: Instalar dependencias y clonar el repositorio dentro del contenedor
+
+Una vez dentro del contenedor, ejecuta los siguientes comandos uno por uno:
+
+```bash
+apt-get update
+apt-get install -y git gcc make
 git clone https://github.com/CarlosJiZe/hangman.git
 cd hangman/server
 ```
 
-### 3. Compilar el servidor
+- `apt-get update` actualiza la lista de paquetes disponibles
+- `apt-get install -y git gcc make` instala Git para clonar el repositorio, GCC que es el compilador de C, y Make que automatiza la compilacion
+- `git clone` descarga el codigo fuente del repositorio
+- `cd hangman/server` navega a la carpeta del servidor
+
+---
+
+## Paso 3: Compilar el servidor
+
+Dentro de la carpeta `server`, ejecuta:
 
 ```bash
 make
 ```
 
-Si compila correctamente veras:
+Si la compilacion es exitosa, veras algo similar a:
 ```
 gcc -Wall -Wextra -g -o server server.c auth.c game_logic.c -lpthread
 ```
 
-### 4. Arrancar el servidor
+Si aparece algun error de compilacion, verifica que gcc y make esten instalados correctamente repitiendo el paso anterior.
+
+---
+
+## Paso 4: Arrancar el servidor
 
 ```bash
 ./server
@@ -89,90 +106,13 @@ Usuarios cargados: 7
 Servidor escuchando en el puerto 5000...
 ```
 
----
-
-## Configuracion del Cliente
-
-### Paso 1 - Clonar el repositorio
-
-En Mac o Linux:
-```bash
-git clone https://github.com/CarlosJiZe/hangman.git
-cd hangman/client
-```
-
-En Windows (abre PowerShell o cmd):
-```bash
-git clone https://github.com/CarlosJiZe/hangman.git
-cd hangman\client
-```
-
-Si no tienes git instalado, descarga el ZIP directamente desde GitHub con el boton verde "Code" y descomprimelo.
-
-### Paso 2 - Verificar que Python funciona
-
-En Mac, es posible que tengas varias versiones de Python instaladas. Verifica cual tienes disponible:
-```bash
-python3 --version
-python3.12 --version
-```
-
-Usa el comando que te devuelva una version 3.10 o superior. En esta guia usamos `python3.12` para Mac pero sustituye por el comando que funcione en tu caso.
-
-En Windows:
-```bash
-python --version
-```
-
-Debes ver Python 3.10 o superior. Si no lo tienes instalado, descargalo desde python.org.
-
-### Paso 3 - Verificar que tkinter esta instalado
-
-```bash
-# En Mac
-python3.12 -m tkinter
-
-# En Windows
-python -m tkinter
-```
-
-Si se abre una ventanita pequeña, tkinter esta listo. Si da error en Mac, instala Python con tkinter incluido:
-```bash
-brew install python-tk@3.12
-```
+El servidor ya esta listo para recibir conexiones. No cierres esta terminal mientras dure la sesion de juego.
 
 ---
 
-## Modos de Ejecucion
+## Paso 5: Obtener la IP de la maquina donde corre Docker
 
-### Modo 1 - Dos clientes en localhost
-
-Ambos clientes se conectan al servidor que corre en Docker en la misma maquina.
-
-Terminal 1 - Servidor (dentro del contenedor Docker):
-```bash
-./server
-```
-
-Terminal 2 - Cliente 1 (en Mac):
-```bash
-python3.12 main.py localhost 5001
-```
-
-Terminal 3 - Cliente 2 (en Mac):
-```bash
-python3.12 main.py localhost 5001
-```
-
-En Windows usa `python` en lugar de `python3.12`.
-
----
-
-### Modo 2 - Distribucion real (dos maquinas distintas)
-
-El servidor corre en Docker en una maquina y los clientes en maquinas diferentes de la misma red WiFi.
-
-Paso 1 - Obtener la IP de la maquina donde corre Docker:
+Para que otros clientes en la red puedan conectarse, necesitas saber la IP de tu maquina. Abre una terminal nueva fuera del contenedor y ejecuta segun tu sistema operativo:
 
 En Mac:
 ```bash
@@ -184,25 +124,88 @@ En Linux:
 hostname -I
 ```
 
-En Windows (abre cmd o PowerShell):
+En Windows, abre cmd o PowerShell y ejecuta:
 ```bash
 ipconfig
 ```
-Busca la seccion de tu adaptador WiFi y anota el valor de `Direccion IPv4`. Se ve algo asi: `192.168.1.110`
 
-Paso 2 - Arrancar el servidor dentro del contenedor:
+Busca la seccion correspondiente a tu adaptador Wi-Fi y anota el valor que aparece junto a "Direccion IPv4". Tendra un formato similar a `192.168.1.110`.
+
+---
+
+## Paso 6: Configurar y ejecutar el cliente
+
+En cada maquina que vaya a jugar, abre una terminal y clona el repositorio:
+
 ```bash
-./server
+git clone https://github.com/CarlosJiZe/hangman.git
+cd hangman/client
 ```
 
-Paso 3 - Cliente en la misma maquina que el servidor (Mac):
+En Windows usa `cd hangman\client` con diagonal invertida.
+
+Antes de correr el cliente, verifica que Python esta correctamente instalado:
+
+En Mac:
+```bash
+python3 --version
+```
+
+Si tienes varias versiones de Python en Mac, usa el comando especifico de la version que instalaste, por ejemplo, `python3.12 --version`. Se recomienda instalar Python 3.12 desde python.org o con Homebrew para evitar conflictos con el Python del sistema.
+
+En Windows:
+```bash
+python --version
+```
+
+En Linux:
+```bash
+python3 --version
+```
+
+Tambien verifica que tkinter este disponible ejecutando:
+
+En Mac:
+```bash
+python3.12 -m tkinter
+```
+
+En Windows y Linux:
+```bash
+python -m tkinter
+```
+
+Si se abre una pequena ventana de prueba, tkinter esta listo. Si no, en Mac instalalo con:
+```bash
+brew install python-tk@3.12
+```
+
+En Linux:
+```bash
+apt-get install python3-tk
+```
+
+En Windows, tkinter viene incluido con la instalacion estandar de Python desde python.org.
+
+---
+
+## Paso 7: Ejecutar el cliente
+
+El cliente recibe como argumentos la IP del servidor y el puerto. El formato es:
+
+```bash
+python3.12 main.py <IP_DEL_SERVIDOR> <PUERTO>
+```
+
+Si el cliente corre en la misma maquina que el servidor:
+
 ```bash
 python3.12 main.py localhost 5001
 ```
 
-Paso 4 - Cliente en otra maquina de la red:
+Si el cliente corre en una maquina diferente (sustituye por la IP obtenida en el Paso 5):
 
-En Mac:
+En Mac o Linux:
 ```bash
 python3.12 main.py 192.168.1.110 5001
 ```
@@ -212,7 +215,13 @@ En Windows:
 python main.py 192.168.1.110 5001
 ```
 
-Sustituye `192.168.1.110` por la IP que obtuviste en el Paso 1. Ambas maquinas deben estar en la misma red WiFi.
+Repite este paso en la segunda maquina para el segundo jugador. Ambas maquinas deben estar en la misma red Wi-Fi.
+
+---
+
+## Paso 8: Jugar
+
+Si se hizo todo lo anterior correctamente, se deben desplegar las pantallas de juego en las que se inicia sesion, y dentro de la propia aplicacion existen instrucciones especificas de como jugar.
 
 ---
 
