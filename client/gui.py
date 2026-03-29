@@ -139,7 +139,7 @@ class HangmanGUI:
     def __init__(self, host, port):
         # Creamos la ventana principal
         self.root = tk.Tk()
-        self.root.title("Hangman — Computo Distribuido")
+        self.root.title("Hangman — Cómputo Distribuido")
         self.root.geometry("600x700")
         self.root.configure(bg=BG_COLOR)
         self.root.resizable(False, False)
@@ -176,8 +176,8 @@ class HangmanGUI:
         return frame
 
     def add_nav_buttons(self, parent):
-        """Agrega los botones Como jugar y Acerca de en la esquina superior derecha"""
-        make_button(parent, "Como jugar", self.show_how_to_play,
+        """Agrega los botones Cómo jugar y Acerca de en la esquina superior derecha"""
+        make_button(parent, "Cómo jugar", self.show_how_to_play,
                     bg=CARD_COLOR, fg=TEXT_COLOR, font_size=10, padx=10, pady=5
                     ).place(relx=1.0, x=-115, y=8, anchor="ne")
 
@@ -197,14 +197,14 @@ class HangmanGUI:
         # Título
         tk.Label(frame, text="HANGMAN", font=("Helvetica", 48, "bold"),
                  bg=BG_COLOR, fg=ACCENT_COLOR).pack(pady=(60, 5))
-        tk.Label(frame, text="Computo Distribuido", font=("Helvetica", 14),
+        tk.Label(frame, text="Cómputo Distribuido", font=("Helvetica", 14),
                  bg=BG_COLOR, fg=SUBTLE_COLOR).pack(pady=(0, 40))
 
         # Card de login
         card = tk.Frame(frame, bg=CARD_COLOR, padx=40, pady=30)
         card.pack(padx=60)
 
-        tk.Label(card, text="Iniciar Sesion", font=("Helvetica", 18, "bold"),
+        tk.Label(card, text="Iniciar Sesión", font=("Helvetica", 18, "bold"),
                  bg=CARD_COLOR, fg=TEXT_COLOR).pack(pady=(0, 20))
 
         # Campo usuario
@@ -217,7 +217,7 @@ class HangmanGUI:
         self.username_entry.pack(pady=(2, 15), ipady=8)
 
         # Campo contraseña
-        tk.Label(card, text="Contrasena", font=("Helvetica", 12),
+        tk.Label(card, text="Contraseña", font=("Helvetica", 12),
                  bg=CARD_COLOR, fg=SUBTLE_COLOR).pack(anchor="w")
         self.password_entry = tk.Entry(card, font=("Helvetica", 13),
                                        bg="#0f3460", fg=TEXT_COLOR,
@@ -257,7 +257,7 @@ class HangmanGUI:
 
         # Mandamos el login
         if not self.net.login(username, password):
-            self.login_error.config(text="Usuario o contrasena incorrectos")
+            self.login_error.config(text="Usuario o contraseña incorrectos")
             self.net.disconnect()
             return
 
@@ -665,7 +665,7 @@ class HangmanGUI:
         # Integrantes
         tk.Label(about, text="\nCarlos J. Zepeda",
                  font=("Georgia", 12), bg="white", fg="#333333").pack()
-        tk.Label(about, text="Jose M. Paredes",
+        tk.Label(about, text="José M. Paredes",
                  font=("Georgia", 12), bg="white", fg="#333333").pack()
         tk.Label(about, text="Omar S. Lopez",
                  font=("Georgia", 12), bg="white", fg="#333333").pack()
@@ -694,7 +694,7 @@ class HangmanGUI:
     def show_how_to_play(self):
         """Abre la ventana de instrucciones detalladas del juego"""
         how = tk.Toplevel(self.root)
-        how.title("Como jugar")
+        how.title("Cómo jugar")
         how.geometry("480x680")
         how.configure(bg="white")
         how.resizable(False, False)
