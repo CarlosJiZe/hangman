@@ -464,7 +464,7 @@ class HangmanGUI:
         frame = self.make_frame()
 
         tk.Label(frame, text="Tu rol: GUESSER", font=("Helvetica", 20, "bold"),
-                 bg=BG_COLOR, fg=ACCENT_COLOR).pack(pady=(20, 5))
+                 bg=BG_COLOR, fg=ACCENT_COLOR).pack(pady=(50, 5))
 
         # Dibujo del ahorcado
         self.hangman_label = tk.Label(
