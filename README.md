@@ -1,6 +1,10 @@
 # Hangman - Computo Distribuido
 
-Juego multijugador del ahorcado implementado con arquitectura cliente-servidor distribuida. El servidor esta escrito en C con fork para manejo concurrente, y los clientes en Python con tkinter para la interfaz grafica.
+Juego multijugador del ahorcado implementado con arquitectura cliente-servidor distribuida. El servidor esta escrito en C con fork para manejo concurrente, y los clientes en Python con tkinter para la interfaz grafica. La comunicacion entre cliente y servidor se realiza mediante sockets TCP en modo conexion, utilizando un protocolo de texto plano disenado especificamente para este proyecto.
+
+La aplicacion permite que dos jugadores se conecten a traves de una red TCP/IP para jugar en tiempo real. El primer jugador en conectarse asume el rol de Setter y elige la palabra secreta, mientras que el segundo asume el rol de Guesser e intenta adivinarla letra por letra antes de agotar sus seis intentos. Al finalizar cada partida la sesion se cierra automaticamente y los roles se intercambian en la siguiente ronda.
+
+**Lenguajes utilizados:** C (servidor), Python 3.12 (cliente)
 
 ---
 
