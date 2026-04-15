@@ -24,67 +24,6 @@ GREEN_COLOR  = "#4ecca3"  # verde para aciertos
 RED_COLOR    = "#e94560"  # rojo para errores
 DARK_COLOR   = "#1a1a2e"  # fondo oscuro para botones en ventanas blancas
 
-# Dibujos del ahorcado, cada elemento es una parte del cuerpo
-# Se van mostrando conforme aumentan los intentos fallidos
-HANGMAN_STAGES = [
-    # 0 intentos, solo la horca
-    ["  +---+  ",
-     "  |   |  ",
-     "      |  ",
-     "      |  ",
-     "      |  ",
-     "      |  ",
-     "========"],
-    # 1 intento, cabeza
-    ["  +---+  ",
-     "  |   |  ",
-     "  O   |  ",
-     "      |  ",
-     "      |  ",
-     "      |  ",
-     "========"],
-    # 2 intentos, cuerpo
-    ["  +---+  ",
-     "  |   |  ",
-     "  O   |  ",
-     "  |   |  ",
-     "      |  ",
-     "      |  ",
-     "========"],
-    # 3 intentos, brazo izquierdo
-    ["  +---+  ",
-     "  |   |  ",
-     "  O   |  ",
-     " /|   |  ",
-     "      |  ",
-     "      |  ",
-     "========"],
-    # 4 intentos, brazo derecho
-    ["  +---+  ",
-     "  |   |  ",
-     "  O   |  ",
-     r" /|\  |  ",
-     "      |  ",
-     "      |  ",
-     "========"],
-    # 5 intentos, pierna izquierda
-    ["  +---+  ",
-     "  |   |  ",
-     "  O   |  ",
-     r" /|\  |  ",
-     " /    |  ",
-     "      |  ",
-     "========"],
-    # 6 intentos, muerto
-    ["  +---+  ",
-     "  |   |  ",
-     "  O   |  ",
-     r" /|\  |  ",
-     r" / \  |  ",
-     "      |  ",
-     "========"],
-]
-
 def make_button(parent, text, command, bg, fg, font_size=12, bold=False, padx=20, pady=8, width=None):
     """
     Crea un botón usando Label + Frame para forzar colores en macOS.
@@ -467,14 +406,12 @@ class HangmanGUI:
                  bg=BG_COLOR, fg=ACCENT_COLOR).pack(pady=(50, 5))
 
         # Dibujo del ahorcado
-        self.hangman_label = tk.Label(
-            frame,
-            text="\n".join(HANGMAN_STAGES[self.wrong_attempts]),
-            font=("Courier", 16),
-            bg=BG_COLOR, fg=TEXT_COLOR,
-            justify="left"
+        self.hangman_canvas = tk.Canvas(
+            frame, width=200, height=250, 
+            bg=BG_COLOR, highlightthickness=0
         )
-        self.hangman_label.pack(pady=(5, 10))
+        self.hangman_canvas.pack(pady=(5,10))
+        self.draw_hangman(self.wrong_attempts)
 
         # Tablero — letras adivinadas y guiones
         self.board_label = tk.Label(
@@ -575,18 +512,144 @@ class HangmanGUI:
                 text="Letra incorrecta", **{"fg": RED_COLOR}))
 
         elif cmd == MSG_WIN:
-            self.root.after(0, lambda: self.show_result(True, response[1]))
+            self.board = list(response[1])
+            self.root.after(0, lambda: self.guess_error.config(
+                text="Salvado!", fg=GREEN_COLOR))
+            self.root.after(0, self.update_guesser_ui)
+            self.root.after(5000, lambda: self.show_result(True, response[1]))
 
         elif cmd == MSG_LOSE:
-            self.root.after(0, lambda: self.show_result(False, response[1]))
+            self.wrong_attempts = 6
+            self.root.after(0, self.update_guesser_ui)
+            self.root.after(0, lambda: self.guess_error.config(
+                text="¡Ahorcado!", fg=RED_COLOR))
+            self.root.after(5000, lambda: self.show_result(False, response[1]))
 
     def update_guesser_ui(self):
         """Actualiza el ahorcado, tablero e intentos en pantalla"""
-        stage = min(self.wrong_attempts, 6)
-        self.hangman_label.config(text="\n".join(HANGMAN_STAGES[stage]))
+        if self.wrong_attempts >= 6:
+            stage = 6  
+        elif self.board and '_' not in self.board:
+            stage = 7  
+        else:
+            stage = self.wrong_attempts
+        self.draw_hangman(stage)
         self.board_label.config(text=self.format_board(self.board))
         self.attempts_label.config(
             text=f"Intentos fallidos: {self.wrong_attempts}/{MAX_ATTEMPTS}")
+        
+    def draw_hangman(self, stage):
+        """Dibuja el ahorcado con gradiente de color, torso relleno y cara de victoria"""
+        self.hangman_canvas.delete("all")  # Limpiar dibujo anterior
+        
+        gallows_color = SUBTLE_COLOR   # Gris para la horca
+        all_body_color = "white"     # Partes blancas
+        win_color = GREEN_COLOR      # Verde victoria
+        
+        def get_gradient_color(step):
+            # RGB de #eaeaea (TEXT_COLOR / Blanco base)
+            r1, g1, b1 = 234, 234, 234
+            # RGB de #e94560 (ACCENT_COLOR / Rojo)
+            r2, g2, b2 = 233, 69, 96
+            
+            if step >= 6: step = 5
+
+            r = int(r1 + (r2 - r1) * (step / 5.0))
+            g = int(g1 + (g2 - g1) * (step / 5.0))
+            b = int(b1 + (b2 - b1) * (step / 5.0))
+            
+            return f'#{r:02x}{g:02x}{b:02x}'
+
+    
+        # Plataforma
+        self.hangman_canvas.create_line(30, 230, 170, 230, fill=gallows_color, width=8, capstyle=tk.ROUND)
+        # Poste principal
+        self.hangman_canvas.create_line(50, 230, 50, 20, fill=gallows_color, width=8, capstyle=tk.ROUND)
+        # Viga superior
+        self.hangman_canvas.create_line(46, 20, 120, 20, fill=gallows_color, width=8, capstyle=tk.ROUND)
+        # Soporte diagonal (hace que la horca se vea mejor construida)
+        self.hangman_canvas.create_line(50, 60, 90, 20, fill=gallows_color, width=6, capstyle=tk.ROUND)
+        # Cuerda
+        self.hangman_canvas.create_line(120, 20, 120, 45, fill="white", width=3)
+
+
+        if stage >= 1 and stage != 7:
+            # Definir color de contorno
+            if stage >= 6: head_outline = ACCENT_COLOR # Derrota = Rojo
+            else: head_outline = get_gradient_color(stage) # Proceso = Gradiente
+            
+            # Contorno de la cabeza
+            self.hangman_canvas.create_oval(100, 45, 140, 85, fill=BG_COLOR, outline=head_outline, width=4)
+            
+            # Dibujar Cara Viva (Nervios)
+            if stage < 6:
+                eye_color = head_outline # Los ojos cambian con el gradiente
+                # Ojos
+                self.hangman_canvas.create_oval(110, 58, 114, 62, fill=eye_color, outline="")
+                self.hangman_canvas.create_oval(126, 58, 130, 62, fill=eye_color, outline="")
+                # Boca de nervios
+                self.hangman_canvas.create_line(116, 72, 124, 72, fill=eye_color, width=2, capstyle=tk.ROUND)
+
+        # 5. Dibujar Cuerpo (REQUISITO 1: Relleno)
+        # Usamos un rectángulo para el torso, con fill (relleno) y outline (borde blanco)
+        if stage >= 2 or stage == 7: # Ambos necesitan el torso relleno
+            if stage == 7: current_body = win_color
+            else: current_body = all_body_color
+            
+            # Torso Relleno: x1, y1, x2, y2 (x1-x2 define grosor, y1-y2 define altura)
+            self.hangman_canvas.create_rectangle(114, 85, 126, 145, fill=current_body, outline=current_body, width=0)
+
+        # 6. Extremidades (REQUISITO 2: Blancas)
+        # Brazo Izquierdo
+        if stage >= 3 or stage == 7: 
+            limb_color = win_color if stage == 7 else all_body_color
+            self.hangman_canvas.create_line(114, 95, 95, 115, 105, 135, fill=limb_color, width=5, capstyle=tk.ROUND, joinstyle=tk.ROUND)
+
+        # Brazo Derecho
+        if stage >= 4 or stage == 7: 
+            limb_color = win_color if stage == 7 else all_body_color
+            self.hangman_canvas.create_line(126, 95, 145, 115, 135, 135, fill=limb_color, width=5, capstyle=tk.ROUND, joinstyle=tk.ROUND)
+
+        # Pierna Izquierda
+        if stage >= 5 or stage == 7: 
+            limb_color = win_color if stage == 7 else all_body_color
+            self.hangman_canvas.create_line(114, 140, 100, 170, 105, 200, fill=limb_color, width=6, capstyle=tk.ROUND, joinstyle=tk.ROUND)
+
+        # Pierna Derecha, Derrota y Victoria (Requisito 3)
+        if stage >= 6 or stage == 7: 
+            # Victoria (REQUISITO 3)
+            if stage == 7:
+                limb_color = win_color
+                # Pierna Derecha Victoria
+                self.hangman_canvas.create_line(126, 140, 140, 170, 135, 200, fill=win_color, width=6, capstyle=tk.ROUND, joinstyle=tk.ROUND)
+                
+                # REQUISITO 3: Cabeza Verde, Expresión Feliz (^_^)
+                self.hangman_canvas.create_oval(100, 45, 140, 85, fill=BG_COLOR, outline=win_color, width=4)
+                
+                # Ojos (Arco hacia arriba)
+                # Ojo Izquierdo
+                self.hangman_canvas.create_arc(106, 52, 118, 68, start=0, extent=180, style=tk.ARC, outline=win_color, width=3)
+                # Ojo Derecho
+                self.hangman_canvas.create_arc(122, 52, 134, 68, start=0, extent=180, style=tk.ARC, outline=win_color, width=3)
+                
+                # REQUISITO 3: Sonrisa (U) (Arco hacia abajo)
+                self.hangman_canvas.create_arc(110, 68, 130, 82, start=180, extent=180, style=tk.ARC, outline=win_color, width=3)
+
+            # Derrota (Stage 6) (Sigue igual, pero con las extremidades blancas)
+            else:
+                # Pierna Derecha Derrota (Blanca)
+                self.hangman_canvas.create_line(126, 140, 140, 170, 135, 200, fill=all_body_color, width=6, capstyle=tk.ROUND, joinstyle=tk.ROUND)
+                
+                # Expresión de muerto (X_X / Rojo)
+                # Limpiamos el interior
+                self.hangman_canvas.create_oval(102, 47, 138, 83, fill=BG_COLOR, outline="")
+                # Ojos de muerto (X_X)
+                self.hangman_canvas.create_line(108, 56, 116, 64, fill=ACCENT_COLOR, width=3, capstyle=tk.ROUND)
+                self.hangman_canvas.create_line(116, 56, 108, 64, fill=ACCENT_COLOR, width=3, capstyle=tk.ROUND)
+                self.hangman_canvas.create_line(124, 56, 132, 64, fill=ACCENT_COLOR, width=3, capstyle=tk.ROUND)
+                self.hangman_canvas.create_line(132, 56, 124, 64, fill=ACCENT_COLOR, width=3, capstyle=tk.ROUND)
+                # Boca triste (arco hacia abajo)
+                self.hangman_canvas.create_arc(110, 75, 130, 85, start=0, extent=180, style=tk.ARC, outline=ACCENT_COLOR, width=3)
 
     """
     PANTALLA 4 — RESULTADO
