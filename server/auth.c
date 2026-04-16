@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "auth.h"
+#include "ip_blocker.h"
 
 //Array para almacenar los usuarios cargados
 static User users[MAX_USERS]; //Es global para que load_users y authenticate puedan acceder a el
@@ -46,13 +47,20 @@ int load_users(const char *filename){
 //Buscamos el username y la contraseña en el array de usuarios cargados
 //Regresamos 1 si el username y password son correctos, 0 si no
 
-int authenticate(const char *username, const char *password){
-    int i;
-
-    for(i = 0; i < num_users; i++){ //Iteramos por todos los usuarios cargados
-        if(strcmp(users[i].username, username)== 0 && strcmp(users[i].password,password)==0){
-            return 1; //Usuario y contraseña correctos
-        }
+int authenticate(const char *username, const char *password, const char *ip){
+    // 1. Primero verificamos si la IP está bloqueada
+    if(is_ip_blocked(ip)){
+        return -2;  // IP bloqueada
     }
-    return 0; //Usuario o contraseña incorrectos
+
+    // 2. Verificamos credenciales
+    int i;
+    for(i = 0; i < num_users; i++){
+        if(strcmp(users[i].username, username) == 0 &&
+           strcmp(users[i].password,  password) == 0){
+            return 1; // Credenciales correctas
+           }
+    }
+
+    return 0; // Credenciales incorrectas (server.c llamará record_failed_attempt)
 }

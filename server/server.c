@@ -13,6 +13,8 @@
 #include "auth.h"
 #include "game_logic.h"
 #include "../shared/protocol.h"
+#include "ip_blocker.h"
+#include "logger.h"
 
 /* ------------------------------------------
  ESTRUCTURA DEL SERVIDOR TCP CON FORK
@@ -77,6 +79,11 @@ void handle_client(int client_fd, struct sockaddr_in client_addr){
 
     //inet_ntoa convierte la direccion IP del cliente a formato legible
     printf("[hijo %d] Cliente conectado desde %s\n",getpid(),inet_ntoa(client_addr.sin_addr));
+
+    char client_ip[INET_ADDRSTRLEN];
+    strncpy(client_ip, inet_ntoa(client_addr.sin_addr), sizeof(client_ip) - 1);
+    client_ip[sizeof(client_ip) - 1] = '\0';
+
     fflush(stdout); //Aseguramos que el mensaje se imprima antes de cualquier otra cosa
 
     /* ------------------------------------------
@@ -111,21 +118,45 @@ void handle_client(int client_fd, struct sockaddr_in client_addr){
         return; //Terminamos la función
     }
 
-    //Validamos el username y password con la función authenticate
-    if(authenticate(username,password)){
-        //Login exitoso
-        snprintf(buffer,sizeof(buffer),"%s\n",MSG_LOGIN_OK);
-        send(client_fd, buffer, strlen(buffer),0); //Enviamos el mensaje de login exitoso
-        printf("[hijo %d] Login exitoso: %s\n",getpid(),username);
+    //Validamos el username y password con la función authenticate y verificamos que no tenga muchos intentos erroneos
+    //int auth_result = authenticate(username, password, client_ip);
+
+    sem_wait(game_sem);
+    int auth_result = authenticate(username, password, client_ip);
+    sem_post(game_sem);
+
+    if(auth_result == 1){
+        // Login exitoso
+        log_auth_attempt(client_ip, username, AUTH_SUCCESS, 1);
+        snprintf(buffer, sizeof(buffer), "%s\n", MSG_LOGIN_OK);
+        send(client_fd, buffer, strlen(buffer), 0);
+        printf("[hijo %d] Login exitoso: %s\n", getpid(), username);
         fflush(stdout);
+
+    } else if(auth_result == -2){
+        // IP bloqueada
+        log_auth_attempt(client_ip, username, AUTH_BLOCKED, -1);
+        snprintf(buffer, sizeof(buffer), "%s\n", MSG_LOGIN_FAIL);
+        send(client_fd, buffer, strlen(buffer), 0);
+        printf("[hijo %d] IP bloqueada: %s\n", getpid(), client_ip);
+        fflush(stdout);
+        close(client_fd);
+        return;
+
     } else {
-        //Login fallido
-        snprintf(buffer,sizeof(buffer),"%s\n",MSG_LOGIN_FAIL);
-        send(client_fd, buffer, strlen(buffer),0); //Enviamos el mensaje de login fallido
-        printf("[hijo %d] Login fallido: %s\n",getpid(),username);
+        // Credenciales incorrectas
+        sem_wait(game_sem);
+        record_failed_attempt(client_ip);
+        sem_post(game_sem);
+        int attempts = get_failed_attempts(client_ip);
+
+        log_auth_attempt(client_ip, username, AUTH_FAILURE, attempts);
+        snprintf(buffer, sizeof(buffer), "%s\n", MSG_LOGIN_FAIL);
+        send(client_fd, buffer, strlen(buffer), 0);
+        printf("[hijo %d] Login fallido: %s\n", getpid(), username);
         fflush(stdout);
-        close(client_fd); //Cerramos el socket del cliente
-        return; //Terminamos la función
+        close(client_fd);
+        return;
     }
 
     /* ------------------------------------------
@@ -415,6 +446,28 @@ int main(){
     ------------------------------------------ */
 
     game_sem = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+    IPRecord *shared_ip_records = mmap(NULL, sizeof(IPRecord) * MAX_TRACKED_IPS,
+                               PROT_READ | PROT_WRITE,
+                               MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(shared_ip_records == MAP_FAILED){
+        perror("Error al crear memoria compartida para ip_blocker");
+        exit(1);
+    }
+
+    int *shared_ip_count = mmap(NULL, sizeof(int),
+                                PROT_READ | PROT_WRITE,
+                                MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(shared_ip_count == MAP_FAILED){
+        perror("Error al crear contador compartido para ip_blocker");
+        exit(1);
+    }
+
+    *shared_ip_count = 0;
+    memset(shared_ip_records, 0, sizeof(IPRecord) * MAX_TRACKED_IPS);
+    ip_blocker_init_shared(shared_ip_records, shared_ip_count);
+
+
     if (game_sem == MAP_FAILED){
         perror("Error al crear el semaforo en memoria compartida");
         exit(1);
@@ -498,6 +551,18 @@ int main(){
 
         //Hacemos el fok para crear un proceso hijo
         //El hijo retorna 0, el padre retorna el PID del hijo
+        /*IPRecord *shared_ip_records = mmap(NULL, sizeof(IPRecord) * MAX_TRACKED_IPS,
+                                   PROT_READ | PROT_WRITE,
+                                   MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+        int *shared_ip_count = mmap(NULL, sizeof(int),
+                                    PROT_READ | PROT_WRITE,
+                                    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+        *shared_ip_count = 0;
+        memset(shared_ip_records, 0, sizeof(IPRecord) * MAX_TRACKED_IPS);
+
+        // Inicializa el blocker con la memoria compartida:
+        ip_blocker_init_shared(shared_ip_records, shared_ip_count);*/
+
         pid = fork();
 
         if(pid < 0){
@@ -524,6 +589,10 @@ int main(){
     ------------------------------------------*/
     munmap(gs, sizeof(GameState)); //Liberamos la memoria compartida del GameState
     munmap(game_sem, sizeof(sem_t)); //Liberamos la memoria compartida del
+
+    munmap(shared_ip_records, sizeof(IPRecord) * MAX_TRACKED_IPS);
+    munmap(shared_ip_count, sizeof(int));
+
     close(server_fd); //Cerramos el socket del servidor
 
     return 0;

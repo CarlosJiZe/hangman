@@ -8,7 +8,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -g
 
 #Archivos fuente del servidor
-SRCS = server.c auth.c game_logic.c
+SRCS = server.c auth.c game_logic.c ip_blocker.c logger.c
 
 #Nombre del ejecutable final
 TARGET = server

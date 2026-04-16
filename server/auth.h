@@ -22,6 +22,6 @@ int load_users(const char* filename);
 
 //authenticate verifica si el username y password son correctos
 // Retorna 1 si son correctos, 0 si no
-int authenticate(const char* username, const char* password);
+int authenticate(const char* username, const char* password, const char *ip);
 
 #endif //AUTH_H
